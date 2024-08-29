@@ -1,0 +1,935 @@
+<html>
+  <head>
+    <base href="https://websim.creation.engine/" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🚀 Salary Rocket: Blast Off Your Career! 💰</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/papaparse@5.3.0/papaparse.min.js"></script>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #e6f3ff; /* Light sky blue */
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      h1 {
+        color: #ff9966; /* Light orange */
+        text-shadow: 1px 1px #ffff99; /* Light yellow */
+        font-size: 2.5em;
+        text-align: center;
+      }
+      #chart-container {
+        width: 80%;
+        max-width: 800px;
+        height: 400px;
+        margin-bottom: 20px;
+        background-color: #ffffff;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      #data-entry,
+      #customize-panel,
+      #download-panel {
+        background-color: #ccffcc; /* Light green */
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        width: 300px;
+        position: fixed;
+        right: -350px;
+        transition: right 0.3s ease-in-out;
+        z-index: 1000;
+      }
+      #data-entry {
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      #customize-panel {
+        top: 20px;
+        height: 70vh;
+        overflow-y: auto;
+      }
+      #download-panel {
+        bottom: 20px;
+      }
+      #data-entry.open,
+      #customize-panel.open,
+      #download-panel.open {
+        right: 20px;
+      }
+      #data-entry h2,
+      #customize-panel h2,
+      #download-panel h2 {
+        color: #ff9966; /* Light orange */
+        margin-top: 0;
+      }
+      input,
+      button,
+      select {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 10px;
+        border: 2px solid #ff9966; /* Light orange */
+        font-size: 1em;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #ff9966; /* Light orange */
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #ff8c66;
+      }
+      #salary-path {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 20px;
+        width: 100%;
+      }
+      .salary-tile {
+        width: 220px;
+        height: auto;
+        background-color: #ffff99; /* Light yellow */
+        margin: 10px;
+        padding: 15px;
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        text-align: left;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, background-color 0.3s;
+        position: relative;
+      }
+      .salary-tile:hover {
+        transform: scale(1.05);
+      }
+      .emoji-button {
+        font-size: 1.2em;
+        padding: 10px 20px;
+      }
+      #toggle-form,
+      #toggle-customize,
+      #toggle-download {
+        position: fixed;
+        right: 20px;
+        background-color: #ff9966;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 1001;
+      }
+      #toggle-form {
+        top: 20px;
+      }
+      #toggle-customize {
+        top: 80px;
+      }
+      #toggle-download {
+        bottom: 20px;
+      }
+      .tile-actions {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        display: flex;
+        gap: 5px;
+      }
+      .tile-actions button {
+        background: none;
+        border: none;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 0;
+        width: auto;
+      }
+      .salary-tile div {
+        margin: 3px 0;
+      }
+      #upload-container {
+        margin-top: 20px;
+      }
+      #file-upload {
+        display: none;
+      }
+      .upload-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #66ccff;
+        color: white;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .upload-button:hover {
+        background-color: #5bb8e8;
+      }
+      #view-selector {
+        margin-bottom: 20px;
+      }
+      /* Roadmap view styles */
+      .roadmap-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 800px;
+        position: relative;
+        padding: 20px 0;
+      }
+      .roadmap-line {
+        position: absolute;
+        width: 6px;
+        background-color: #ff9966;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .roadmap-tile {
+        width: 300px;
+        padding: 20px;
+        border-radius: 15px;
+        background-color: #ffff99;
+        margin: 20px 0;
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .roadmap-tile::before {
+        content: "";
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background-color: #ff9966;
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .roadmap-tile:nth-child(odd) {
+        align-self: flex-start;
+        margin-right: 50%;
+      }
+      .roadmap-tile:nth-child(even) {
+        align-self: flex-end;
+        margin-left: 50%;
+      }
+      .roadmap-tile:nth-child(odd)::before {
+        right: -45px;
+      }
+      .roadmap-tile:nth-child(even)::before {
+        left: -45px;
+      }
+      /* Waterfall view styles */
+      .waterfall-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 800px;
+        padding: 20px 0;
+      }
+      .waterfall-tile {
+        width: 80%;
+        padding: 20px;
+        border-radius: 15px;
+        background-color: #ffff99;
+        margin: 10px 0;
+        position: relative;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .waterfall-tile::before {
+        content: "";
+        position: absolute;
+        width: 4px;
+        background-color: #ff9966;
+        top: -10px;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .waterfall-tile:first-child::before {
+        display: none;
+      }
+      /* Table view styles */
+      .table-view {
+        width: 100%;
+        max-width: 800px;
+        margin-top: 20px;
+        border-collapse: collapse;
+        background-color: #ffffff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 15px;
+        overflow: hidden;
+      }
+      .table-view th,
+      .table-view td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .table-view th {
+        background-color: #ff9966;
+        color: white;
+        font-weight: bold;
+      }
+      .table-view tr:last-child td {
+        border-bottom: none;
+      }
+      .table-view tr:nth-child(even) {
+        background-color: #f8f8f8;
+      }
+      .table-view tr:hover {
+        background-color: #f0f0f0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🚀 Salary Rocket: Blast Off Your Career! 💰</h1>
+
+    <div id="chart-container">
+      <canvas id="salaryChart"></canvas>
+    </div>
+
+    <div id="view-selector">
+      <label for="view-style">Choose View Style:</label>
+      <select id="view-style">
+        <option value="default">Default View</option>
+        <option value="roadmap">Roadmap View</option>
+        <option value="waterfall">Waterfall View</option>
+        <option value="table">Table View</option>
+      </select>
+    </div>
+
+    <div id="salary-path"></div>
+
+    <button id="toggle-form">✨</button>
+    <button id="toggle-customize">🎨</button>
+    <button id="toggle-download">💾</button>
+
+    <div id="data-entry">
+      <h2>✨ Add New Salary Data</h2>
+      <form id="salary-form">
+        <input type="text" id="company" placeholder="🏢 Company" required />
+        <input type="number" id="salary" placeholder="💰 Salary" required />
+        <input type="number" id="bonus" placeholder="🎉 Bonus" />
+        <input type="number" id="year" placeholder="📅 Year" required />
+        <button type="submit" class="emoji-button">🚀 Add Data</button>
+      </form>
+    </div>
+
+    <div id="customize-panel">
+      <h2>🎨 Customize Your Rocket</h2>
+      <label for="heading-color">Heading Color:</label>
+      <input type="color" id="heading-color" value="#ff9966" />
+      <label for="tile-color">Tile Color:</label>
+      <input type="color" id="tile-color" value="#ffff99" />
+      <label for="tile-text-color">Tile Text Color:</label>
+      <input type="color" id="tile-text-color" value="#000000" />
+      <label for="company-emoji">Company Emoji:</label>
+      <input type="text" id="company-emoji" value="🏢" maxlength="2" />
+      <label for="salary-emoji">Salary Emoji:</label>
+      <input type="text" id="salary-emoji" value="💰" maxlength="2" />
+      <label for="bonus-emoji">Bonus Emoji:</label>
+      <input type="text" id="bonus-emoji" value="🎉" maxlength="2" />
+      <label for="year-emoji">Year Emoji:</label>
+      <input type="text" id="year-emoji" value="📅" maxlength="2" />
+      <button id="apply-customization" class="emoji-button">
+        ✅ Apply Changes
+      </button>
+    </div>
+
+    <div id="download-panel">
+      <h2>💾 Download Options</h2>
+      <button id="downloadCSV" class="emoji-button">📊 Download CSV</button>
+      <button id="downloadImage" class="emoji-button">🖼️ Download Graph</button>
+    </div>
+
+    <div id="upload-container">
+      <label for="file-upload" class="upload-button">
+        📤 Upload Salary Data
+      </label>
+      <input type="file" id="file-upload" accept=".csv" />
+    </div>
+
+    <script>
+      let salaryData = [];
+      const ctx = document.getElementById("salaryChart").getContext("2d");
+      let chart;
+      let customEmojis = {
+        company: "🏢",
+        salary: "💰",
+        bonus: "🎉",
+        year: "📅",
+      };
+      let customTileColor = "#ffff99"; // Default tile color
+      let customTileTextColor = "#000000"; // Default tile text color
+
+      // Load data from localStorage on page load
+      function loadData() {
+        const savedData = localStorage.getItem("salaryData");
+        const savedCustomization = localStorage.getItem("customization");
+
+        if (savedData) {
+          salaryData = JSON.parse(savedData);
+        }
+
+        if (savedCustomization) {
+          const customization = JSON.parse(savedCustomization);
+          customEmojis = customization.emojis;
+          customTileColor = customization.tileColor;
+          customTileTextColor = customization.tileTextColor;
+          document.querySelector("h1").style.color = customization.headingColor;
+
+          // Update customization panel inputs
+          document.getElementById("heading-color").value =
+            customization.headingColor;
+          document.getElementById("tile-color").value = customTileColor;
+          document.getElementById("tile-text-color").value =
+            customTileTextColor;
+          document.getElementById("company-emoji").value = customEmojis.company;
+          document.getElementById("salary-emoji").value = customEmojis.salary;
+          document.getElementById("bonus-emoji").value = customEmojis.bonus;
+          document.getElementById("year-emoji").value = customEmojis.year;
+        }
+
+        updateChart();
+        updateSalaryPath();
+      }
+
+      // Save data to localStorage
+      function saveData() {
+        localStorage.setItem("salaryData", JSON.stringify(salaryData));
+      }
+
+      // Save customization settings
+      function saveCustomization() {
+        const customization = {
+          emojis: customEmojis,
+          tileColor: customTileColor,
+          tileTextColor: customTileTextColor,
+          headingColor: document.querySelector("h1").style.color,
+        };
+        localStorage.setItem("customization", JSON.stringify(customization));
+      }
+
+      function updateChart() {
+        const labels = salaryData.map((d) => d.year);
+        const salaries = salaryData.map((d) => d.salary);
+        const bonuses = salaryData.map((d) => d.bonus || 0);
+
+        if (chart) {
+          chart.destroy();
+        }
+
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "💰 Salary",
+                data: salaries,
+                borderColor: "#ff9966",
+                backgroundColor: "rgba(255, 153, 102, 0.2)",
+                borderWidth: 2,
+                fill: true,
+              },
+              {
+                label: "🎉 Bonus",
+                data: bonuses,
+                borderColor: "#66ccff",
+                backgroundColor: "rgba(102, 204, 255, 0.2)",
+                borderWidth: 2,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "Amount ($)",
+                },
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: "Year",
+                },
+              },
+            },
+            plugins: {
+              title: {
+                display: true,
+                text: "🚀 Your Career Growth 📈",
+                font: {
+                  size: 18,
+                },
+              },
+              legend: {
+                position: "bottom",
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    const dataIndex = context.dataIndex;
+                    const dataPoint = salaryData[dataIndex];
+                    return [
+                      `Company: ${dataPoint.company}`,
+                      `Salary: $${dataPoint.salary}`,
+                      `Bonus: $${dataPoint.bonus || 0}`,
+                      `Year: ${dataPoint.year}`,
+                    ];
+                  },
+                },
+              },
+            },
+          },
+        });
+        saveData(); // Save data after updating the chart
+      }
+
+      function updateSalaryPath() {
+        const pathContainer = document.getElementById("salary-path");
+        pathContainer.innerHTML = "";
+
+        const viewStyle = document.getElementById("view-style").value;
+
+        if (viewStyle === "default") {
+          pathContainer.className = "";
+          salaryData.forEach((data, index) =>
+            createDefaultTile(data, index, pathContainer)
+          );
+        } else if (viewStyle === "roadmap") {
+          pathContainer.className = "roadmap-view";
+          const roadmapLine = document.createElement("div");
+          roadmapLine.className = "roadmap-line";
+          pathContainer.appendChild(roadmapLine);
+          salaryData.forEach((data, index) =>
+            createRoadmapTile(data, index, pathContainer)
+          );
+        } else if (viewStyle === "waterfall") {
+          pathContainer.className = "waterfall-view";
+          salaryData.forEach((data, index) =>
+            createWaterfallTile(data, index, pathContainer)
+          );
+        } else if (viewStyle === "table") {
+          createTableView(pathContainer);
+        }
+        saveData(); // Save data after updating the salary path
+      }
+
+      function createDefaultTile(data, index, container) {
+        const tile = document.createElement("div");
+        tile.className = "salary-tile";
+        tile.style.backgroundColor = customTileColor;
+        tile.style.color = customTileTextColor;
+
+        const company = document.createElement("div");
+        company.textContent = `${customEmojis.company} Company: ${data.company}`;
+        company.style.fontWeight = "bold";
+
+        const salary = document.createElement("div");
+        salary.textContent = `${
+          customEmojis.salary
+        } Salary: $${data.salary.toLocaleString()}`;
+
+        const bonus = document.createElement("div");
+        bonus.textContent = `${customEmojis.bonus} Bonus: $${(
+          data.bonus || 0
+        ).toLocaleString()}`;
+
+        const year = document.createElement("div");
+        year.textContent = `${customEmojis.year} Year: ${data.year}`;
+
+        tile.appendChild(company);
+        tile.appendChild(salary);
+        tile.appendChild(bonus);
+        tile.appendChild(year);
+
+        if (index > 0) {
+          const prevSalary = salaryData[index - 1].salary;
+          const increase = (
+            ((data.salary - prevSalary) / prevSalary) *
+            100
+          ).toFixed(2);
+          const increaseEl = document.createElement("div");
+          increaseEl.textContent = `📈 Increase: +${increase}%`;
+          increaseEl.style.color = "#008000";
+          tile.appendChild(increaseEl);
+
+          const prevBonus = salaryData[index - 1].bonus || 0;
+          const currentBonus = data.bonus || 0;
+          if (prevBonus > 0 && currentBonus > 0) {
+            const bonusIncrease = (
+              ((currentBonus - prevBonus) / prevBonus) *
+              100
+            ).toFixed(2);
+            const bonusIncreaseEl = document.createElement("div");
+            bonusIncreaseEl.textContent = `🎊 Bonus Increase: +${bonusIncrease}%`;
+            bonusIncreaseEl.style.color = "#ffa500";
+            tile.appendChild(bonusIncreaseEl);
+          }
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "tile-actions";
+
+        const editButton = document.createElement("button");
+        editButton.textContent = "✏️";
+        editButton.title = "Edit";
+        editButton.addEventListener("click", () => editSalaryData(index));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "🗑️";
+        deleteButton.title = "Delete";
+        deleteButton.addEventListener("click", () => deleteSalaryData(index));
+
+        actions.appendChild(editButton);
+        actions.appendChild(deleteButton);
+        tile.appendChild(actions);
+
+        container.appendChild(tile);
+      }
+
+      function createRoadmapTile(data, index, container) {
+        const tile = document.createElement("div");
+        tile.className = "roadmap-tile";
+        tile.style.backgroundColor = customTileColor;
+        tile.style.color = customTileTextColor;
+
+        tile.innerHTML = `
+        <div><strong>${customEmojis.company} ${data.company}</strong></div>
+        <div>${
+          customEmojis.salary
+        } Salary: $${data.salary.toLocaleString()}</div>
+        <div>${customEmojis.bonus} Bonus: $${(
+          data.bonus || 0
+        ).toLocaleString()}</div>
+        <div>${customEmojis.year} Year: ${data.year}</div>
+      `;
+
+        if (index > 0) {
+          const prevSalary = salaryData[index - 1].salary;
+          const increase = (
+            ((data.salary - prevSalary) / prevSalary) *
+            100
+          ).toFixed(2);
+          tile.innerHTML += `<div style="color: #008000;">📈 Increase: +${increase}%</div>`;
+
+          const prevBonus = salaryData[index - 1].bonus || 0;
+          const currentBonus = data.bonus || 0;
+          if (prevBonus > 0 && currentBonus > 0) {
+            const bonusIncrease = (
+              ((currentBonus - prevBonus) / prevBonus) *
+              100
+            ).toFixed(2);
+            tile.innerHTML += `<div style="color: #ffa500;">🎊 Bonus Increase: +${bonusIncrease}%</div>`;
+          }
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "tile-actions";
+        actions.innerHTML = `
+        <button title="Edit" onclick="editSalaryData(${index})">✏��</button>
+        <button title="Delete" onclick="deleteSalaryData(${index})">🗑️</button>
+      `;
+        tile.appendChild(actions);
+
+        container.appendChild(tile);
+      }
+
+      function createWaterfallTile(data, index, container) {
+        const tile = document.createElement("div");
+        tile.className = "waterfall-tile";
+        tile.style.backgroundColor = customTileColor;
+        tile.style.color = customTileTextColor;
+
+        tile.innerHTML = `
+        <div><strong>${customEmojis.company} ${data.company}</strong></div>
+        <div>${
+          customEmojis.salary
+        } Salary: $${data.salary.toLocaleString()}</div>
+        <div>${customEmojis.bonus} Bonus: $${(
+          data.bonus || 0
+        ).toLocaleString()}</div>
+        <div>${customEmojis.year} Year: ${data.year}</div>
+      `;
+
+        if (index > 0) {
+          const prevSalary = salaryData[index - 1].salary;
+          const increase = (
+            ((data.salary - prevSalary) / prevSalary) *
+            100
+          ).toFixed(2);
+          tile.innerHTML += `<div style="color: #008000;">📈 Increase: +${increase}%</div>`;
+
+          const prevBonus = salaryData[index - 1].bonus || 0;
+          const currentBonus = data.bonus || 0;
+          if (prevBonus > 0 && currentBonus > 0) {
+            const bonusIncrease = (
+              ((currentBonus - prevBonus) / prevBonus) *
+              100
+            ).toFixed(2);
+            tile.innerHTML += `<div style="color: #ffa500;">🎊 Bonus Increase: +${bonusIncrease}%</div>`;
+          }
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "tile-actions";
+        actions.innerHTML = `
+        <button title="Edit" onclick="editSalaryData(${index})">✏️</button>
+        <button title="Delete" onclick="deleteSalaryData(${index})">🗑️</button>
+      `;
+        tile.appendChild(actions);
+
+        container.appendChild(tile);
+      }
+
+      function createTableView(container) {
+        const table = document.createElement("table");
+        table.className = "table-view";
+
+        const thead = document.createElement("thead");
+        thead.innerHTML = `
+        <tr>
+          <th>${customEmojis.year} Year</th>
+          <th>${customEmojis.company} Company</th>
+          <th>${customEmojis.salary} Salary</th>
+          <th>${customEmojis.bonus} Bonus</th>
+          <th>📈 Increase</th>
+          <th>Actions</th>
+        </tr>
+      `;
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        salaryData.forEach((data, index) => {
+          const tr = document.createElement("tr");
+          let increase = "";
+          let bonusIncrease = "";
+          if (index > 0) {
+            const prevSalary = salaryData[index - 1].salary;
+            increase =
+              (((data.salary - prevSalary) / prevSalary) * 100).toFixed(2) +
+              "%";
+
+            const prevBonus = salaryData[index - 1].bonus || 0;
+            const currentBonus = data.bonus || 0;
+            if (prevBonus > 0 && currentBonus > 0) {
+              bonusIncrease =
+                (((currentBonus - prevBonus) / prevBonus) * 100).toFixed(2) +
+                "%";
+            }
+          }
+          tr.innerHTML = `
+          <td>${data.year}</td>
+          <td>${data.company}</td>
+          <td>$${data.salary.toLocaleString()}</td>
+          <td>$${(data.bonus || 0).toLocaleString()}</td>
+          <td>${increase}${
+            bonusIncrease ? ` (Bonus: ${bonusIncrease})` : ""
+          }</td>
+          <td>
+            <button onclick="editSalaryData(${index})">✏️</button>
+            <button onclick="deleteSalaryData(${index})">🗑️</button>
+          </td>
+        `;
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        container.appendChild(table);
+      }
+
+      function editSalaryData(index) {
+        const data = salaryData[index];
+        document.getElementById("company").value = data.company;
+        document.getElementById("salary").value = data.salary;
+        document.getElementById("bonus").value = data.bonus || "";
+        document.getElementById("year").value = data.year;
+
+        document.getElementById("data-entry").classList.add("open");
+        document.getElementById("toggle-form").textContent = "✖️";
+
+        const form = document.getElementById("salary-form");
+        form.onsubmit = function (e) {
+          e.preventDefault();
+          salaryData[index] = {
+            company: document.getElementById("company").value,
+            salary: parseFloat(document.getElementById("salary").value),
+            bonus: parseFloat(document.getElementById("bonus").value) || 0,
+            year: parseInt(document.getElementById("year").value),
+          };
+          salaryData.sort((a, b) => a.year - b.year);
+          updateChart();
+          updateSalaryPath();
+          form.reset();
+          form.onsubmit = null;
+          document.getElementById("data-entry").classList.remove("open");
+          document.getElementById("toggle-form").textContent = "✨";
+          saveData(); // Save data after editing
+        };
+      }
+
+      function deleteSalaryData(index) {
+        if (confirm("Are you sure you want to delete this salary data?")) {
+          salaryData.splice(index, 1);
+          updateChart();
+          updateSalaryPath();
+          saveData(); // Save data after deleting
+        }
+      }
+
+      document
+        .getElementById("salary-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const newData = {
+            company: document.getElementById("company").value,
+            salary: parseFloat(document.getElementById("salary").value),
+            bonus: parseFloat(document.getElementById("bonus").value) || 0,
+            year: parseInt(document.getElementById("year").value),
+          };
+          salaryData.push(newData);
+          salaryData.sort((a, b) => a.year - b.year);
+          updateChart();
+          updateSalaryPath();
+          this.reset();
+          document.getElementById("data-entry").classList.remove("open");
+          document.getElementById("toggle-form").textContent = "✨";
+          saveData(); // Save data after adding new entry
+        });
+
+      document
+        .getElementById("downloadCSV")
+        .addEventListener("click", function () {
+          const csv = Papa.unparse(salaryData);
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+          const link = document.createElement("a");
+          if (navigator.msSaveBlob) {
+            navigator.msSaveBlob(blob, "salary_data.csv");
+          } else {
+            link.href = URL.createObjectURL(blob);
+            link.download = "salary_data.csv";
+            link.click();
+          }
+        });
+
+      document
+        .getElementById("downloadImage")
+        .addEventListener("click", function () {
+          const link = document.createElement("a");
+          link.download = "salary_chart.png";
+          link.href = document.getElementById("salaryChart").toDataURL();
+          link.click();
+        });
+
+      const toggleForm = document.getElementById("toggle-form");
+      const dataEntry = document.getElementById("data-entry");
+
+      toggleForm.addEventListener("click", function () {
+        dataEntry.classList.toggle("open");
+        toggleForm.textContent = dataEntry.classList.contains("open")
+          ? "✖️"
+          : "✨";
+      });
+
+      const toggleCustomize = document.getElementById("toggle-customize");
+      const customizePanel = document.getElementById("customize-panel");
+
+      toggleCustomize.addEventListener("click", function () {
+        customizePanel.classList.toggle("open");
+        toggleCustomize.textContent = customizePanel.classList.contains("open")
+          ? "✖️"
+          : "🎨";
+      });
+
+      const toggleDownload = document.getElementById("toggle-download");
+      const downloadPanel = document.getElementById("download-panel");
+
+      toggleDownload.addEventListener("click", function () {
+        downloadPanel.classList.toggle("open");
+        toggleDownload.textContent = downloadPanel.classList.contains("open")
+          ? "✖️"
+          : "💾";
+      });
+
+      document
+        .getElementById("file-upload")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            Papa.parse(file, {
+              complete: function (results) {
+                salaryData = results.data
+                  .map((row) => ({
+                    company: row[0],
+                    salary: parseFloat(row[1]),
+                    bonus: parseFloat(row[2]) || 0,
+                    year: parseInt(row[3]),
+                  }))
+                  .filter((data) => !isNaN(data.salary) && !isNaN(data.year));
+                salaryData.sort((a, b) => a.year - b.year);
+                updateChart();
+                updateSalaryPath();
+                saveData(); // Save data after file upload
+              },
+              header: false,
+            });
+          }
+        });
+
+      document
+        .getElementById("apply-customization")
+        .addEventListener("click", function () {
+          const headingColor = document.getElementById("heading-color").value;
+          customTileColor = document.getElementById("tile-color").value;
+          customTileTextColor =
+            document.getElementById("tile-text-color").value;
+
+          document.querySelector("h1").style.color = headingColor;
+
+          customEmojis.company = document.getElementById("company-emoji").value;
+          customEmojis.salary = document.getElementById("salary-emoji").value;
+          customEmojis.bonus = document.getElementById("bonus-emoji").value;
+          customEmojis.year = document.getElementById("year-emoji").value;
+
+          updateSalaryPath();
+          saveCustomization(); // Save customization settings
+        });
+
+      document
+        .getElementById("view-style")
+        .addEventListener("change", function () {
+          updateSalaryPath();
+        });
+
+      updateChart();
+      updateSalaryPath();
+
+      // Load data when the page loads
+      window.addEventListener("DOMContentLoaded", loadData);
+    </script>
+  </body>
+</html>
