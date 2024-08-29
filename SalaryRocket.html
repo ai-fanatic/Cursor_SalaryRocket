@@ -297,6 +297,13 @@
       .table-view tr:hover {
         background-color: #f0f0f0;
       }
+      footer {
+        margin-top: 20px;
+        text-align: center;
+      }
+      footer img {
+        margin: 0 5px;
+      }
     </style>
   </head>
   <body>
@@ -329,7 +336,7 @@
         <input type="number" id="salary" placeholder="💰 Salary" required />
         <input type="number" id="bonus" placeholder="🎉 Bonus" />
         <input type="number" id="year" placeholder="📅 Year" required />
-        <button type="submit" class="emoji-button">🚀 Add Data</button>
+        <button type="submit" class="emoji-button">🚀 Add/ Upd</button>
       </form>
     </div>
 
@@ -346,7 +353,7 @@
       <label for="salary-emoji">Salary Emoji:</label>
       <input type="text" id="salary-emoji" value="💰" maxlength="2" />
       <label for="bonus-emoji">Bonus Emoji:</label>
-      <input type="text" id="bonus-emoji" value="🎉" maxlength="2" />
+      <input type="text" id="bonus-emoji" value="" maxlength="2" />
       <label for="year-emoji">Year Emoji:</label>
       <input type="text" id="year-emoji" value="📅" maxlength="2" />
       <button id="apply-customization" class="emoji-button">
@@ -602,13 +609,48 @@
         const deleteButton = document.createElement("button");
         deleteButton.textContent = "🗑️";
         deleteButton.title = "Delete";
-        deleteButton.addEventListener("click", () => deleteSalaryData(index));
+        deleteButton.addEventListener("click", () =>
+          showDeleteConfirmation(index, tile)
+        );
 
         actions.appendChild(editButton);
         actions.appendChild(deleteButton);
         tile.appendChild(actions);
 
         container.appendChild(tile);
+      }
+
+      function showDeleteConfirmation(index, tile) {
+        const confirmation = document.createElement("div");
+        confirmation.className = "delete-confirmation";
+        confirmation.style.position = "absolute";
+        confirmation.style.top = "50%";
+        confirmation.style.left = "50%";
+        confirmation.style.transform = "translate(-50%, -50%)";
+        confirmation.style.backgroundColor = "#808000";
+        confirmation.style.padding = "20px";
+        confirmation.style.borderRadius = "10px";
+        confirmation.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+        confirmation.style.textAlign = "center";
+        confirmation.innerHTML = `
+          <p>Are you sure you want to delete this entry?</p>
+          <button onclick="confirmDelete(${index}, this)" style="margin-right: 10px;">Yes</button>
+          <button onclick="cancelDelete(this)">No</button>
+        `;
+
+        tile.appendChild(confirmation);
+      }
+
+      function confirmDelete(index, button) {
+        salaryData.splice(index, 1);
+        updateChart();
+        updateSalaryPath();
+        saveData(); // Save data after deleting
+      }
+
+      function cancelDelete(button) {
+        const confirmation = button.parentElement;
+        confirmation.remove();
       }
 
       function createRoadmapTile(data, index, container) {
@@ -651,7 +693,7 @@
         actions.className = "tile-actions";
         actions.innerHTML = `
         <button title="Edit" onclick="editSalaryData(${index})">✏️</button>
-        <button title="Delete" onclick="deleteSalaryData(${index})">🗑️</button>
+        <button title="Delete" onclick="showDeleteConfirmation(${index}, this.parentElement.parentElement)">🗑️</button>
       `;
         tile.appendChild(actions);
 
@@ -698,7 +740,7 @@
         actions.className = "tile-actions";
         actions.innerHTML = `
         <button title="Edit" onclick="editSalaryData(${index})">✏️</button>
-        <button title="Delete" onclick="deleteSalaryData(${index})">🗑️</button>
+        <button title="Delete" onclick="showDeleteConfirmation(${index}, this.parentElement.parentElement)">🗑️</button>
       `;
         tile.appendChild(actions);
 
@@ -751,7 +793,7 @@
           }</td>
           <td>
             <button onclick="editSalaryData(${index})">✏️</button>
-            <button onclick="deleteSalaryData(${index})">🗑️</button>
+            <button onclick="showDeleteConfirmation(${index}, this.parentElement.parentElement)">🗑️</button>
           </td>
         `;
           tbody.appendChild(tr);
@@ -772,7 +814,16 @@
         document.getElementById("toggle-form").textContent = "✖️";
 
         const form = document.getElementById("salary-form");
-        form.onsubmit = function (e) {
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.textContent = "🔄 Update";
+
+        // Remove any existing edit event listener
+        form.removeEventListener("submit", handleFormSubmit);
+
+        // Add new edit event listener
+        form.addEventListener("submit", handleEditSubmit);
+
+        function handleEditSubmit(e) {
           e.preventDefault();
           salaryData[index] = {
             company: document.getElementById("company").value,
@@ -784,41 +835,40 @@
           updateChart();
           updateSalaryPath();
           form.reset();
-          form.onsubmit = null;
           document.getElementById("data-entry").classList.remove("open");
           document.getElementById("toggle-form").textContent = "✨";
-          saveData(); // Save data after editing
-        };
-      }
+          submitButton.textContent = "🚀 Add/ Upd";
 
-      function deleteSalaryData(index) {
-        if (confirm("Are you sure you want to delete this salary data?")) {
-          salaryData.splice(index, 1);
-          updateChart();
-          updateSalaryPath();
-          saveData(); // Save data after deleting
+          // Remove edit event listener and restore original submit handler
+          form.removeEventListener("submit", handleEditSubmit);
+          form.addEventListener("submit", handleFormSubmit);
+          saveData();
         }
       }
 
+      // Separate function for handling regular form submissions
+      function handleFormSubmit(e) {
+        e.preventDefault();
+        const newData = {
+          company: document.getElementById("company").value,
+          salary: parseFloat(document.getElementById("salary").value),
+          bonus: parseFloat(document.getElementById("bonus").value) || 0,
+          year: parseInt(document.getElementById("year").value),
+        };
+        salaryData.push(newData);
+        salaryData.sort((a, b) => a.year - b.year);
+        updateChart();
+        updateSalaryPath();
+        this.reset();
+        document.getElementById("data-entry").classList.remove("open");
+        document.getElementById("toggle-form").textContent = "✨";
+        saveData();
+      }
+
+      // Update the event listener for the form
       document
         .getElementById("salary-form")
-        .addEventListener("submit", function (e) {
-          e.preventDefault();
-          const newData = {
-            company: document.getElementById("company").value,
-            salary: parseFloat(document.getElementById("salary").value),
-            bonus: parseFloat(document.getElementById("bonus").value) || 0,
-            year: parseInt(document.getElementById("year").value),
-          };
-          salaryData.push(newData);
-          salaryData.sort((a, b) => a.year - b.year);
-          updateChart();
-          updateSalaryPath();
-          this.reset();
-          document.getElementById("data-entry").classList.remove("open");
-          document.getElementById("toggle-form").textContent = "✨";
-          saveData(); // Save data after adding new entry
-        });
+        .addEventListener("submit", handleFormSubmit);
 
       document
         .getElementById("downloadCSV")
@@ -927,5 +977,30 @@
       // Load data when the page loads
       window.addEventListener("DOMContentLoaded", loadData);
     </script>
+
+    <footer>
+      <p>Made with ❤ for AI</p>
+      <a href="https://www.linkedin.com/in/nchatlapalli/" target="_blank">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png"
+          alt="LinkedIn"
+          style="width: 24px; height: 24px"
+        />
+      </a>
+      <a href="https://twitter.com/navaifanatic" target="_blank">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/5/5a/X_icon_2.svg"
+          alt="Twitter"
+          style="width: 24px; height: 24px"
+        />
+      </a>
+      <a href="https://naveen.aifanatic.pro/" target="_blank">
+        <img
+          src="https://www.pngitem.com/pimgs/m/490-4903240_konfest-png-jpg-image-pic-photo-free-download.png"
+          alt="Website"
+          style="width: 24px; height: 24px"
+        />
+      </a>
+    </footer>
   </body>
 </html>
