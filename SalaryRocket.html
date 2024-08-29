@@ -387,6 +387,8 @@
 
         if (savedData) {
           salaryData = JSON.parse(savedData);
+          updateChart();
+          updateSalaryPath();
         }
 
         if (savedCustomization) {
@@ -407,9 +409,6 @@
           document.getElementById("bonus-emoji").value = customEmojis.bonus;
           document.getElementById("year-emoji").value = customEmojis.year;
         }
-
-        updateChart();
-        updateSalaryPath();
       }
 
       // Save data to localStorage
@@ -651,7 +650,7 @@
         const actions = document.createElement("div");
         actions.className = "tile-actions";
         actions.innerHTML = `
-        <button title="Edit" onclick="editSalaryData(${index})">✏��</button>
+        <button title="Edit" onclick="editSalaryData(${index})">✏️</button>
         <button title="Delete" onclick="deleteSalaryData(${index})">🗑️</button>
       `;
         tile.appendChild(actions);
@@ -924,9 +923,6 @@
         .addEventListener("change", function () {
           updateSalaryPath();
         });
-
-      updateChart();
-      updateSalaryPath();
 
       // Load data when the page loads
       window.addEventListener("DOMContentLoaded", loadData);
